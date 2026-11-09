@@ -1,0 +1,46 @@
+name: Jarvis APK Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Java Setup
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Extract Project
+        run: |
+          mkdir -p build-src
+          unzip -o Jarvis_Android_Projesi.zip -d build-src
+
+      - name: Build APK
+        run: |
+          cd build-src
+          chmod +x gradlew 2>/dev/null || true
+          if [ -f gradlew ]; then
+            ./gradlew assembleDebug
+          else
+            echo "Gradle wrapper bulunamadı"
+            exit 1
+          fi
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Jarvis-APK
+          path: build-src/**/build/outputs/apk/debug/*.apk
