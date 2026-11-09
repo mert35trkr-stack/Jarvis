@@ -28,7 +28,7 @@ jobs:
       - name: Extract Project
         run: |
           mkdir -p build-src
-          unzip -o Jarvis_Android_Projesi.zip -d build-src
+          unzip -o Jarvis_Android_Projesi_v2.zip -d build-src
 
       - name: Build APK
         run: |
