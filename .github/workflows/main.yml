@@ -1,3 +1,4 @@
+
 name: Jarvis APK Build
 
 on:
@@ -6,43 +7,65 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Java Setup
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Android SDK
+      - name: Set up Android SDK
         uses: android-actions/setup-android@v3
-        with:
-          packages: ''
 
-      - name: Extract Project
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+
+      - name: Install Gradle
+        run: |
+          curl -L https://services.gradle.org/distributions/gradle-8.9-bin.zip -o /tmp/gradle.zip
+          unzip -q /tmp/gradle.zip -d /tmp
+          echo "/tmp/gradle-8.9/bin" >> "$GITHUB_PATH"
+
+      - name: Extract Android project
         run: |
           mkdir -p build-src
-          unzip -o Jarvis_Android_Projesi_v2.zip -d build-src
-
-      - name: Build APK
-        run: |
-          cd build-src
-          chmod +x gradlew 2>/dev/null || true
-          if [ -f gradlew ]; then
-            ./gradlew assembleDebug
+          if [ -f Jarvis_Android_Projesi_v2.zip ]; then
+            unzip -oq Jarvis_Android_Projesi_v2.zip -d build-src
           else
-            echo "Gradle wrapper bulunamadı"
+            echo "Android project ZIP not found."
             exit 1
           fi
+
+      - name: Find Gradle project
+        id: project
+        run: |
+          SETTINGS=$(find build-src -type f \( -name settings.gradle -o -name settings.gradle.kts \) -print -quit)
+          if [ -z "$SETTINGS" ]; then
+            echo "Gradle settings file not found."
+            find build-src -maxdepth 4 -type f
+            exit 1
+          fi
+          echo "dir=$(dirname "$SETTINGS")" >> "$GITHUB_OUTPUT"
+
+      - name: Build debug APK
+        working-directory: ${{ steps.project.outputs.dir }}
+        run: |
+          gradle --no-daemon assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Jarvis-APK
-          path: build-src/**/build/outputs/apk/debug/*.apk
+          name: Jarvis-debug-APK
+          path: build-src/**/*.apk
+          if-no-files-found: error
